@@ -1,54 +1,116 @@
 #include <iostream>
-#include <array>
-#include "Example.h"
+#include <ranges>
+#include <raylib.h>
+#include <cmath>
+
+
+const int OneUnit=100;
+const float BorderHeight=720, BorderWidth=1280;
+struct coord {
+    float x=BorderWidth/2;
+    float y=BorderHeight/2;
+};
+struct Size {
+    float width=0.;
+    float height=0.;
+};
+enum class WoundSeverity {
+    Superficial,
+    Severe,
+    Fatal
+};
+struct Wound {
+    WoundSeverity severity;
+};
+
+class Part {
+protected:
+    coord position{};
+    Size size{};
+    float strength=1.;
+    float weight=1.;
+    float durability=1.;
+    int parent=-1;
+    float angle=0.;
+    Wound wound;
+
+public:
+    Part()=default;
+
+};
+class Limb:public Part {
+protected:
+    Part* parent=nullptr;
+    Part* child=nullptr;
+
+    float boneDensity=1.;
+    float muscleDensity=1.;
+    float boneLength=1.;
+    void updateDimentions()
+    {size.width=(boneDensity+muscleDensity);
+    size.height=boneLength;}
+
+public:
+    Limb() {
+        updateDimentions();
+    }
+
+    void setParent(Part* p){parent=p;}
+    void setChild(Part* c){child=c;}
+    Part* getParent(){return parent;}
+    Part* getChild(){return child;}
+
+    void changeBone(float density,float lenght) {
+        boneDensity=density;
+        boneLength=lenght;
+        updateDimentions();
+    }
+    void changeMuscle(float desity) {
+        muscleDensity=desity;
+        updateDimentions();
+    }
+    coord getEndPosition() const {
+        const float pixelLength = boneLength * OneUnit;
+        return coord{
+            position.x + std::sin(angle) * pixelLength,
+            position.y + std::cos(angle) * pixelLength
+        };
+    }
+
+    void draw() const {
+        const coord endPos = getEndPosition();
+        const Vector2 start{position.x, position.y};
+        const Vector2 end{endPos.x, endPos.y};
+
+        const float boneThickness = boneDensity/10 * OneUnit;
+        const float totalThickness = size.width/10 * OneUnit;
+
+
+        DrawLineEx(start, end, totalThickness, Fade(MAROON, 0.55f));
+
+        DrawLineEx(start, end, boneThickness, RAYWHITE);
+
+        const float jointRadius = boneThickness * 1.2f;
+        DrawCircleV(start, jointRadius, DARKBLUE);
+        DrawCircleV(end, jointRadius, SKYBLUE);
+    }
+
+
+};
+
 
 int main() {
-    std::cout << "Hello, world!\n";
-    Example e1;
-    e1.add(3);
-    e1.g();
-    std::array<int, 100> v{};
-    int nr;
-    std::cout << "Introduceți nr: ";
-    /////////////////////////////////////////////////////////////////////////
-    /// Observație: dacă aveți nevoie să citiți date de intrare de la tastatură,
-    /// dați exemple de date de intrare folosind fișierul tastatura.txt
-    /// Trebuie să aveți în fișierul tastatura.txt suficiente date de intrare
-    /// (în formatul impus de voi) astfel încât execuția programului să se încheie.
-    /// De asemenea, trebuie să adăugați în acest fișier date de intrare
-    /// pentru cât mai multe ramuri de execuție.
-    /// Dorim să facem acest lucru pentru a automatiza testarea codului, fără să
-    /// mai pierdem timp de fiecare dată să introducem de la zero aceleași date de intrare.
-    ///
-    /// Pe GitHub Actions (bife), fișierul tastatura.txt este folosit
-    /// pentru a simula date introduse de la tastatură.
-    /// Bifele verifică dacă programul are erori de compilare, erori de memorie și memory leaks.
-    ///
-    /// Dacă nu puneți în tastatura.txt suficiente date de intrare, îmi rezerv dreptul să vă
-    /// testez codul cu ce date de intrare am chef și să nu pun notă dacă găsesc vreun bug.
-    /// Impun această cerință ca să învățați să faceți un demo și să arătați părțile din
-    /// program care merg (și să le evitați pe cele care nu merg).
-    ///
-    /////////////////////////////////////////////////////////////////////////
-    std::cin >> nr;
-    /////////////////////////////////////////////////////////////////////////
-    for(int i = 0; i < nr; ++i) {
-        std::cout << "v[" << i << "] = ";
-        std::cin >> v[i];
+    InitWindow(BorderWidth, BorderHeight, "Engene");
+    SetTargetFPS(60);
+Limb limb;
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        DrawText("Engene - Raylib activ", 20, 20, 20, DARKGRAY);
+        limb.draw();
+        EndDrawing();
     }
-    std::cout << "\n\n";
-    std::cout << "Am citit de la tastatură " << nr << " elemente:\n";
-    for(int i = 0; i < nr; ++i) {
-        std::cout << "- " << v[i] << "\n";
-    }
-    ///////////////////////////////////////////////////////////////////////////
-    /// Pentru date citite din fișier, NU folosiți tastatura.txt. Creați-vă voi
-    /// alt fișier propriu cu ce alt nume doriți.
-    /// Exemplu:
-    /// std::ifstream fis("date.txt");
-    /// for(int i = 0; i < nr2; ++i)
-    ///     fis >> v2[i];
-    ///
-    ///////////////////////////////////////////////////////////////////////////
+
+    CloseWindow();
     return 0;
 }

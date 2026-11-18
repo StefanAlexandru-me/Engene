@@ -31,7 +31,21 @@ include(cmake/RegisterTests.cmake)
 
 # External dependencies with FetchContent
 
-# include(FetchContent)
+include(FetchContent)
+
+find_package(raylib QUIET)
+if(NOT raylib_FOUND)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+            raylib
+            SYSTEM
+            GIT_REPOSITORY https://github.com/raysan5/raylib.git
+            GIT_TAG 5.5
+            GIT_SHALLOW 1
+    )
+    FetchContent_MakeAvailable(raylib)
+endif()
 #
 # set(FETCHCONTENT_QUIET OFF CACHE INTERNAL "Override verbose output" FORCE)
 # set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE INTERNAL "Override update strategy" FORCE)
@@ -105,7 +119,7 @@ target_include_directories(${MAIN_LIBRARY_NAME} SYSTEM PRIVATE
 
 # Link libraries
 
-target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE ${MAIN_LIBRARY_NAME})
+target_link_libraries(${MAIN_EXECUTABLE_NAME} PRIVATE ${MAIN_LIBRARY_NAME} raylib)
 
 # target_link_directories(${MAIN_EXECUTABLE_NAME} PRIVATE ${<SomeLib>_BINARY_DIR}/lib)
 # target_link_libraries(${MAIN_EXECUTABLE_NAME} <SomeLib>)
