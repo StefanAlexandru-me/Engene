@@ -33,11 +33,60 @@ protected:
     int parent=-1;
     float angle=0.;
     Wound wound;
+    bool isDragging = false;
+    coord grabOffset;
 
 public:
     Part()=default;
+    Part(coord pos, Size sz, float str, float wgt, float dur, int parentIdx = -1)
+        : position(pos),
+          size(sz),
+          strength(str),
+          weight(wgt),
+          durability(dur),
+          parent(parentIdx) {}
+    coord getPosition() const {return position;}
+
+    virtual void setPosition(coord newPos) {
+        position = newPos;
+    }
+
+    //to be checked
+
+    virtual bool containsPoint(Vector2 mouse) const {
+        const Rectangle bounds{
+            position.x - size.width * 0.5f,
+            position.y - size.height * 0.5f,
+            size.width,
+            size.height
+        };
+        return CheckCollisionPointRec(mouse, bounds);
+    }
+
+    //
+    bool IsHeld(Vector2 mouse) {
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && containsPoint(mouse)) {
+            isDragging = true;
+            grabOffset = coord{position.x - mouse.x, position.y - mouse.y};
+        }
+
+        if (isDragging) {
+            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                setPosition(coord{mouse.x + grabOffset.x, mouse.y + grabOffset.y});
+                return true;
+            }
+            isDragging = false;
+        }
+        return false;
+    }
+
+
 
 };
+
+
+
+
 class Limb:public Part {
 protected:
     Part* parent=nullptr;
@@ -54,19 +103,33 @@ public:
     Limb() {
         updateDimentions();
     }
+    Limb(coord pos, float boneDens, float muscleDens, float length)
+        : Part(pos, Size{}, 1.0f, 1.0f, 1.0f),
+          boneDensity(boneDens),
+          muscleDensity(muscleDens),
+          boneLength(length) {
+        updateDimentions();
+    }
 
-    void setParent(Part* p){parent=p;}
-    void setChild(Part* c){child=c;}
+void setParent(Part* p) { parent = p; }
+    void setChild(Part* c) {
+        child = c;
+        if (child != nullptr) {
+            child->setPosition(getEndPosition());
+        }
+    }
     Part* getParent(){return parent;}
     Part* getChild(){return child;}
 
+
+
     void changeBone(float density,float lenght) {
-        boneDensity=density;
+        boneDensity+=density;
         boneLength=lenght;
         updateDimentions();
     }
     void changeMuscle(float desity) {
-        muscleDensity=desity;
+        muscleDensity+=desity;
         updateDimentions();
     }
     coord getEndPosition() const {
@@ -76,6 +139,31 @@ public:
             position.y + std::cos(angle) * pixelLength
         };
     }
+    void setPosition(coord newPos) override {
+        position = newPos;
+        if (child != nullptr) {
+            child->setPosition(getEndPosition());
+        }
+    }
+
+    void realiniere(float newAngle) {
+        angle = newAngle;
+        setPosition(position);
+    }
+    //test this
+
+    bool containsPoint(Vector2 mouse) const override {
+        const coord endPos = getEndPosition();
+        const Vector2 start{position.x, position.y};
+        const Vector2 end{endPos.x, endPos.y};
+        const float radius = (size.width/10 * OneUnit) * 0.5f;
+
+        return CheckCollisionPointLine(mouse, start, end, static_cast<int>(radius)) ||
+               CheckCollisionPointCircle(mouse, start, radius) ||
+               CheckCollisionPointCircle(mouse, end, radius);
+    }
+
+    //
 
     void draw() const {
         const coord endPos = getEndPosition();
@@ -100,14 +188,19 @@ public:
 
 
 int main() {
+   Limb limb;
+    Limb limb2;
+
     InitWindow(BorderWidth, BorderHeight, "Engene");
     SetTargetFPS(60);
-Limb limb;
     while (!WindowShouldClose()) {
+        limb.IsHeld(GetMousePosition());
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
         DrawText("Engene - Raylib activ", 20, 20, 20, DARKGRAY);
         limb.draw();
+        limb2.draw();
         EndDrawing();
     }
 
