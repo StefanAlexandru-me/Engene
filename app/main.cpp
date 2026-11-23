@@ -9,26 +9,47 @@
 
 const int OneUnit=100;
 const float BorderHeight=720, BorderWidth=1280;
+
 struct coord {
     float x=BorderWidth/2;
     float y=BorderHeight/2;
+    friend std::ostream& operator<<(std::ostream& os, const coord& c) {
+        os << "(" << c.x << ", " << c.y << ")";
+        return os;
+    }
 };
 struct Size {
     float width=0.;
     float height=0.;
+    friend std::ostream& operator<<(std::ostream& os, const Size& s) {
+        os << s.width << "x" << s.height;
+        return os;
+    }
 };
 enum class WoundSeverity {
     Superficial,
     Severe,
     Fatal
+
 };
+
 struct Wound {
     WoundSeverity severity;
+   friend std::ostream& operator<<(std::ostream& os, const Wound& w) {
+        switch (w.severity) {
+            case WoundSeverity::Superficial: os << "Superficial"; break;
+            case WoundSeverity::Severe:      os << "Severe";      break;
+            case WoundSeverity::Fatal:       os << "Fatal";       break;
+            default:                         os << "Unknown";     break;
+        }
+        return os;
+    }
 };
 
 enum class HoverType {
     Limb,
     Joint
+
 };
 
 struct HoveredItem {
@@ -44,6 +65,10 @@ struct HoveredItem {
         }
         return item + " [" + std::to_string(id) + "]";
     }
+   friend std::ostream& operator<<(std::ostream& os, const HoveredItem& item) {
+        os << item.show();
+        return os;
+    }
 };
 
 
@@ -56,11 +81,19 @@ private:
     coord position;
     float radius;
     int id = -1;
-    public:
-    int getId() const { return id; }
-    void setId(int newId) { id = newId; }
+
+public:
     Joint()=default;
     Joint(coord pos, float radius): position(pos), radius(radius) {}
+
+    friend std::ostream& operator<<(std::ostream& os, const Joint& j) {
+        os << "Joint[" << j.id << "] pos=" << j.position << " r=" << j.radius;
+        return os;
+    }
+
+    int getId() const { return id; }
+    void setId(int newId) { id = newId; }
+
 
     coord getPosition() const {return position;}
     void setPosition(coord newPos) {position = newPos;}
@@ -106,6 +139,16 @@ public:
           weight(wgt),
           durability(dur),
           parent(parentIdx) {}
+
+    friend std::ostream& operator<<(std::ostream& os, const Part& p) {
+        os << "Part[" << p.id << "] pos=" << p.position
+           << " size=" << p.size
+           << " angle=" << p.angle
+           << " wound=" << p.wound;
+        return os;
+    }
+
+
 
     int getId() const { return id; }
     void setId(int newId) { id = newId; }
@@ -185,10 +228,64 @@ public:
         updateDimentions();
     }
 
+    Limb(const Limb& other)
+        : Part(other),
+          CoupleIndex(other.CoupleIndex),
+          boneDensity(other.boneDensity),
+          muscleDensity(other.muscleDensity),
+          boneLength(other.boneLength) {
+        if (other.joints[0] != nullptr) {
+            joints[0] = new Joint(*other.joints[0]);
+        }
+        if (other.joints[1] != nullptr) {
+            joints[1] = new Joint(*other.joints[1]);
+        }
+    }
+
     ~Limb() {
         delete joints[0];
         delete joints[1];
     }
+
+    Limb& operator=(const Limb& other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        Part::operator=(other);
+        CoupleIndex = other.CoupleIndex;
+        boneDensity = other.boneDensity;
+        muscleDensity = other.muscleDensity;
+        boneLength = other.boneLength;
+
+        delete joints[0];
+        delete joints[1];
+        joints[0] = nullptr;
+        joints[1] = nullptr;
+
+        if (other.joints[0] != nullptr) {
+            joints[0] = new Joint(*other.joints[0]);
+        }
+        if (other.joints[1] != nullptr) {
+            joints[1] = new Joint(*other.joints[1]);
+        }
+
+        return *this;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Limb& l) {
+        const Part& base = l;
+        os << "Limb{" << base
+           << ", boneDens=" << l.boneDensity
+           << ", muscleDens=" << l.muscleDensity
+           << ", length=" << l.boneLength;
+        if (l.joints[0] != nullptr) os << ", j0=" << *l.joints[0];
+        if (l.joints[1] != nullptr) os << ", j1=" << *l.joints[1];
+        os << "}";
+        return os;
+    }
+
+
 
     void setPosition(coord newPos) {
         position = newPos;
@@ -272,11 +369,29 @@ public:
 
     Editor() = default;
 
+    Editor(int initialLimbCount) {
+        for (int i = 0; i < initialLimbCount; ++i) {
+            createLimb();
+        }
+    }
+
     ~Editor() {
         for (Limb* limb : allLimbs) {
             delete limb;
         }
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const Editor& e) {
+        os << "Editor (" << e.allLimbs.size() << " limbs, " << e.allJoints.size() << " joints):\n";
+        for (const Limb* limb : e.allLimbs) {
+            if (limb != nullptr) {
+                os << "  " << *limb << "\n";
+            }
+        }
+        return os;
+    }
+
+
 
 
     Limb* createLimb() {
@@ -353,9 +468,10 @@ int main() {
         limb2->getJoint(0)->draw(false, mouse);
         limb2->getJoint(1)->draw(false, mouse);
         editor.drawHoveredItems();
+
         EndDrawing();
     }
-
+  std::cout << editor << "\n";
     CloseWindow();
     return 0;
 }
