@@ -335,10 +335,6 @@ int main() {
         limb->getJoint(1)->draw(false, mouse);
         limb2->getJoint(0)->draw(false, mouse);
         limb2->getJoint(1)->draw(false, mouse);
-        // for (auto& i:getHoveredItems(mouse)) {
-        //     std::cout << i.show() << std::endl;
-        // }
-        // EndDrawing();
         drawHoveredItems();
         EndDrawing();
     }
