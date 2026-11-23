@@ -263,60 +263,77 @@ public:
 
 
 
-// Non class stuff
+class Editor {
+    private:
+    std::vector<Limb*> allLimbs;
+    std::vector<Joint*> allJoints;
+    Part* selectedPart = nullptr;
+public:
 
-std::vector<Limb*> allLimbs;
-std::vector<Joint*> allJoints;
-Part* selectedPart = nullptr;
+    Editor() = default;
 
-
-Limb* createLimb() {
-    coord spawnPos{BorderWidth / 3.0f, BorderHeight * 2.0f / 3.0f};
-    Limb* limb = new Limb(spawnPos, 1.0f, 1.0f, 1.0f, 0.0f);
-
-    limb->setId(allLimbs.size());
-    allLimbs.push_back(limb);
-
-    Joint* j0 = limb->getJoint(0);
-    j0->setId(allJoints.size());
-    allJoints.push_back(j0);
-
-    Joint* j1 = limb->getJoint(1);
-    j1->setId(allJoints.size());
-    allJoints.push_back(j1);
-
-    return limb;
-}
-
-std::vector<HoveredItem> getHoveredItems(Vector2 mouse) {
-    std::vector<HoveredItem> hovered;
-
-    for (Limb* limb : allLimbs) {
-        if (limb->containsPoint(mouse)) {
-            hovered.push_back(HoveredItem{HoverType::Limb, limb->getId()});
+    ~Editor() {
+        for (Limb* limb : allLimbs) {
+            delete limb;
         }
     }
 
-    for (Joint* joint : allJoints) {
-        if (joint->containsPoint(mouse)) {
-            hovered.push_back(HoveredItem{HoverType::Joint, joint->getId()});
+
+    Limb* createLimb() {
+        coord spawnPos{BorderWidth / 3.0f, BorderHeight * 2.0f / 3.0f};
+        Limb* limb = new Limb(spawnPos, 1.0f, 1.0f, 1.0f, 0.0f);
+
+        limb->setId(allLimbs.size());
+        allLimbs.push_back(limb);
+
+        Joint* j0 = limb->getJoint(0);
+        j0->setId(allJoints.size());
+        allJoints.push_back(j0);
+
+        Joint* j1 = limb->getJoint(1);
+        j1->setId(allJoints.size());
+        allJoints.push_back(j1);
+
+        return limb;
+    }
+
+    std::vector<HoveredItem> getHoveredItems(Vector2 mouse) {
+        std::vector<HoveredItem> hovered;
+
+        for (Limb* limb : allLimbs) {
+            if (limb->containsPoint(mouse)) {
+                hovered.push_back(HoveredItem{HoverType::Limb, limb->getId()});
+            }
+        }
+
+        for (Joint* joint : allJoints) {
+            if (joint->containsPoint(mouse)) {
+                hovered.push_back(HoveredItem{HoverType::Joint, joint->getId()});
+            }
+        }
+
+        return hovered;
+    }
+    void drawHoveredItems() {
+        int Y = 20;
+        for (auto& item : getHoveredItems(GetMousePosition())) {
+            DrawText(item.show().c_str(), 20, Y, 20, DARKGRAY);
+            Y+=20;
         }
     }
 
-    return hovered;
-}
-void drawHoveredItems() {
-    int Y = 20;
-    for (auto& item : getHoveredItems(GetMousePosition())) {
-        DrawText(item.show().c_str(), 20, Y, 20, DARKGRAY);
-        Y+=20;
-    }
-}
+};
+
+
+
+
+
 
 
 int main() {
-    Limb *limb=createLimb();
-    Limb *limb2=createLimb();
+    Editor editor;
+    Limb *limb=editor.createLimb();
+    Limb *limb2=editor.createLimb();
     limb2->setPosition({BorderWidth/2,BorderHeight/2});
     InitWindow(BorderWidth, BorderHeight, "Engene");
     SetTargetFPS(60);
@@ -335,7 +352,7 @@ int main() {
         limb->getJoint(1)->draw(false, mouse);
         limb2->getJoint(0)->draw(false, mouse);
         limb2->getJoint(1)->draw(false, mouse);
-        drawHoveredItems();
+        editor.drawHoveredItems();
         EndDrawing();
     }
 
