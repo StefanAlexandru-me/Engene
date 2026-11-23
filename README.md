@@ -1,36 +1,6 @@
-# Nu primesc notă pentru că nu am pus titlu și descriere
+# Engene
 
-### Folosiți template-ul corespunzător grupei voastre!
-
-| Laborant  | Link template                                |
-|-----------|----------------------------------------------|
-| Dragoș B  | https://github.com/Ionnier/oop-template      |
-| Tiberiu M | https://github.com/MaximTiberiu/oop-template |
-| Marius MC | https://github.com/mcmarius/oop-template     |
-
-### Important!
-
-Aveți voie cu agenți care generează cod doar dacă păstrați AGENTS.md și de `.internal/` *pe toată durata semestrului*.
-Știm că se poate trișa foarte ușor. Ideea nu este să învățați să trișați mai bine, ci să înțelegeți ce faceți.
-Codul generat pus "ca să fie"/pe care nu îl înțelegeți nu se punctează.
-
-Codul din proiect trebuie să poată fi ușor de înțeles și de modificat de către altcineva. Pentru detalii, veniți la ore.
-
-O cerință nu se consideră îndeplinită dacă este realizată doar prin cod generat.
-
-- **Fără cod de umplutură/fără sens!**
-- **Fără copy-paste!**
-- **Fără variabile globale!**
-- **Fără atribute publice!**
-- **Fără date în cod!** Datele vor fi citite din fișier, rețea sau bază de date, aveți exemple destule.
-- **Obligatoriu** fișiere cu date mai multe din care să citiți, obligatoriu cu biblioteci externe: fișiere (local sau server) sau baze de date
-- obligatoriu (TBD) să integrați cel puțin două biblioteci externe pe lângă cele pentru stocare
-
-**NOU!** Livrabile pentru toate temele:
-- aplicație
-- bibliotecă
-- interfața publică pentru bibliotecă
-
+**Engene** este un joc de tip sandbox în care utilizatorul asamblează creaturi din diverse segmente anatomice , conectate între ele prin ligamente. În cadrul editorului, proprietățile fizice ale fiecărei componente — precum lungimea, densitatea osoasă și densitatea musculară — pot fi ajustate pentru a influența greutatea, rezistența și mobilitatea creaturii. Odată construite, creaturilor li se definește un obiectiv specific (precum locomoția sau supraviețuirea), iar simularea evaluează modul în care acestea își coordonează segmentele pentru a-l îndeplini. Prin selecție și adaptare succesivă, tiparele de mișcare și structura creaturilor evoluează de la o generație la alta în funcție de performanța obținută.
 ### Tema 0
 
 - [ ] Nume proiect (poate fi schimbat ulterior)
