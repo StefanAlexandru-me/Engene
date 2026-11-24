@@ -4,6 +4,7 @@
 #include <cmath>
 #include <memory>
 #include <vector>
+#include<string>
 #include<unordered_set>
 
 
@@ -148,7 +149,7 @@ public:
     void setId(int newId) { id = newId; }
 
     coord getPosition() const { return position; }
-    
+
 };
 
 class Limb : public Part {
