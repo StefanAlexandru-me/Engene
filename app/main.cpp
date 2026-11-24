@@ -73,7 +73,7 @@ struct HoveredItem {
 class Joint {
 private:
     coord position;
-    float radius;
+    float radius=10;
     int id = -1;
 
 public:
@@ -313,6 +313,10 @@ public:
     Joint* getJoint(int index) const { return joints[index]; }
 
     void replaceJoint(int index, Joint* newJoint) {
+        if (index < 0 || index > 1 || newJoint == nullptr) {
+            return;
+        }
+        delete joints[index];
         joints[index] = newJoint;
         updateDimentions();
     }
@@ -351,12 +355,12 @@ class Editor {
     private:
     std::vector<Limb*> allLimbs;
     std::vector<Joint*> allJoints;
-    Part* selectedPart = nullptr;
+  //  Part* selectedPart = nullptr;
 public:
 
     Editor() = default;
 
-    Editor(int initialLimbCount) {
+    explicit Editor(int initialLimbCount) {
         for (int i = 0; i < initialLimbCount; ++i) {
             createLimb();
         }
@@ -402,13 +406,13 @@ public:
     std::vector<HoveredItem> getHoveredItems(Vector2 mouse) {
         std::vector<HoveredItem> hovered;
 
-        for (Limb* limb : allLimbs) {
+        for (const Limb* limb : allLimbs) {
             if (limb->containsPoint(mouse)) {
                 hovered.push_back(HoveredItem{HoverType::Limb, limb->getId()});
             }
         }
 
-        for (Joint* joint : allJoints) {
+        for (const Joint* joint : allJoints) {
             if (joint->containsPoint(mouse)) {
                 hovered.push_back(HoveredItem{HoverType::Joint, joint->getId()});
             }
@@ -418,7 +422,7 @@ public:
     }
     void drawHoveredItems() {
         int Y = 20;
-        for (auto& item : getHoveredItems(GetMousePosition())) {
+        for (const auto& item : getHoveredItems(GetMousePosition())) {
             DrawText(item.show().c_str(), 20, Y, 20, DARKGRAY);
             Y+=20;
         }
@@ -428,6 +432,15 @@ public:
 
 int main() {
  Editor editor;
+    Limb *limb=editor.createLimb();
+    Limb *limb2=editor.createLimb();
+    limb2->changeBone(0.2f, 1.2f);
+    limb2->changeMuscle(0.3f);
+    limb2->realiniere(0.5f);
+
+    Limb previewLimb(coord{100.0f, 100.0f}, 1.0f, 1.0f, 1.0f, 0.0f);
+    previewLimb.replaceJoint(1, new Joint(coord{150.0f, 150.0f}, previewLimb.getJoint(0)->getRadius()));
+    std::cout << previewLimb << "\n";
     int mode = 1;
     std::cin >> mode;
     if (mode == 0) {
@@ -437,8 +450,7 @@ int main() {
     //test
 
 
-    Limb *limb=editor.createLimb();
-    Limb *limb2=editor.createLimb();
+
     limb2->setPosition({BorderWidth/2,BorderHeight/2});
     InitWindow(BorderWidth, BorderHeight, "Engene");
     SetTargetFPS(60);
