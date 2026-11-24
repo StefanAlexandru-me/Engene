@@ -32,7 +32,6 @@ enum class WoundSeverity {
     Fatal
 
 };
-
 struct Wound {
     WoundSeverity severity;
    friend std::ostream& operator<<(std::ostream& os, const Wound& w) {
@@ -45,7 +44,6 @@ struct Wound {
         return os;
     }
 };
-
 enum class HoverType {
     Limb,
     Joint
@@ -70,10 +68,6 @@ struct HoveredItem {
         return os;
     }
 };
-
-
-
-
 
 
 class Joint {
@@ -182,10 +176,6 @@ public:
         return false;
     }
 };
-
-
-
-
 
 class Limb : public Part {
 protected:
@@ -357,9 +347,6 @@ public:
     }
 };
 
-
-
-
 class Editor {
     private:
     std::vector<Limb*> allLimbs;
@@ -439,14 +426,16 @@ public:
 
 };
 
-
-
-
-
-
-
 int main() {
-    Editor editor;
+ Editor editor;
+    int mode = 1;
+    std::cin >> mode;
+    if (mode == 0) {
+        std::cout << editor << "\n";
+        return 0;
+    }
+
+
     Limb *limb=editor.createLimb();
     Limb *limb2=editor.createLimb();
     limb2->setPosition({BorderWidth/2,BorderHeight/2});
