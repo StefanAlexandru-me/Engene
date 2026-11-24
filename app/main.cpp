@@ -148,33 +148,7 @@ public:
     void setId(int newId) { id = newId; }
 
     coord getPosition() const { return position; }
-    void setPosition(coord newPos) { position = newPos; }
-
-    bool containsPoint(Vector2 mouse) const {
-        const Rectangle bounds{
-            position.x - size.width * 0.5f,
-            position.y - size.height * 0.5f,
-            size.width,
-            size.height
-        };
-        return CheckCollisionPointRec(mouse, bounds);
-    }
-
-    bool IsHeld(Vector2 mouse) {
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && containsPoint(mouse)) {
-            isDragging = true;
-            grabOffset = coord{position.x - mouse.x, position.y - mouse.y};
-        }
-
-        if (isDragging) {
-            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                setPosition(coord{mouse.x + grabOffset.x, mouse.y + grabOffset.y});
-                return true;
-            }
-            isDragging = false;
-        }
-        return false;
-    }
+    
 };
 
 class Limb : public Part {
