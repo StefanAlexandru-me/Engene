@@ -266,7 +266,7 @@ public:
 
     bool isCoupled() const { return CoupleIndex != -1; }
     int getCoupleIndex() const { return CoupleIndex; }
-    bool getIsDragging() const { return isDragging; }
+  //  bool getIsDragging() const { return isDragging; }
 
     void setPosition(const coord& newPos) {
         position = newPos;
@@ -702,35 +702,35 @@ public:
 
 void LoadScenario(Editor& editor) {
     // buton creere limb
-    editor.createButton(Size{80., 40.}, LIGHTGRAY, coord{20., 650.}, false, [&editor]() {
+    editor.createButton(Size{80.0f, 40.0f}, LIGHTGRAY, coord{20.0f, 650.0f}, false, [&editor]() {
         editor.createLimb();
     });
 
     // buton adaugare lungime
-    editor.createButton(Size{80., 40.}, SKYBLUE, coord{110., 650.}, true, [&editor]() {
+    editor.createButton(Size{80.0f, 40.0f}, SKYBLUE, coord{110.0f, 650.0f}, false, [&editor]() {
         if (Limb* selected = editor.getSelectedLimb()) {
-            selected->changeLength(0.2);
+            selected->changeLength(0.2f);
         }
     });
 
     // scadere lungime
-    editor.createButton(Size{80., 40.}, RED, coord{200., 650.}, true, [&editor]() {
+    editor.createButton(Size{80.0f, 40.0f}, RED, coord{200.0f, 650.0f}, true, [&editor]() {
         if (Limb* selected = editor.getSelectedLimb()) {
-            selected->changeLength(-0.02);
+            selected->changeLength(-0.02f);
         }
     });
 
     // scimbare unghi+
-    editor.createButton(Size{80., 40.}, YELLOW, coord{290., 650.}, true, [&editor]() {
+    editor.createButton(Size{80.0f, 40.0f}, GREEN, coord{290.0f, 650.0f}, true, [&editor]() {
         if (Limb* selected = editor.getSelectedLimb()) {
-            selected->realiniere(selected->getAngle() + 0.1);
+            selected->realiniere(selected->getAngle() + 0.1f);
         }
     });
 
     // scimbare unghi-
-    editor.createButton(Size{80., 40.}, GREEN, coord{380., 650.}, true, [&editor]() {
+    editor.createButton(Size{80.0f, 40.0f}, YELLOW, coord{380.0f, 650.0f}, true, [&editor]() {
         if (Limb* selected = editor.getSelectedLimb()) {
-            selected->realiniere(selected->getAngle() - 0.1);
+            selected->realiniere(selected->getAngle() - 0.1f);
         }
     });
 }
