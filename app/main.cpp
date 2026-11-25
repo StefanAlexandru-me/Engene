@@ -376,6 +376,9 @@ private:
     std::vector<Limb*> allLimbs;
     std::vector<Joint*> allJoints;
 
+    HoverType selectedType = HoverType::Limb;
+    int selectedId = -1;
+
 public:
     Editor() = default;
 
@@ -400,6 +403,9 @@ public:
             if (limb != nullptr) {
                 os << "  " << *limb << "\n";
             }
+        }
+        if (e.selectedId != -1) {
+            os << "  Selected: " << HoveredItem{e.selectedType, e.selectedId} << "\n";
         }
         return os;
     }
@@ -439,11 +445,33 @@ public:
 
         return hovered;
     }
+    void updateSelection(Vector2 mouse) {
+        if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            return;
+        }
 
+        const std::vector<HoveredItem> hovered = getHoveredItems(mouse);
+        if (hovered.empty()) {
+            selectedId = -1;
+            return;
+        }
+
+        selectedType = hovered.back().type;
+        selectedId = hovered.back().id;
+    }
+
+
+    void drawSelectedItem()const {
+        int Y=20;
+        if (selectedId != -1) {
+            const std::string text = "Selected: " + HoveredItem{selectedType, selectedId}.show();
+            DrawText(text.c_str(), 170, Y, 20, GREEN);
+        }
+    }
     void drawHoveredItems() const {
         int Y = 20;
         for (const auto& item : getHoveredItems(GetMousePosition())) {
-            DrawText(item.show().c_str(), 20, Y, 20, DARKGRAY);
+            DrawText(item.show().c_str(), 70, Y, 20, DARKGRAY);
             Y += 20;
         }
     }
@@ -476,7 +504,9 @@ int main() {
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
+
         Vector2 mouse = GetMousePosition();
+        editor.updateSelection(mouse);
         spawnBtn.Toggle(mouse);
         limb->IsHeld(mouse);
         limb2->IsHeld(mouse);
@@ -491,6 +521,7 @@ int main() {
         limb2->getJoint(1)->draw(false, mouse);
         spawnBtn.draw();
         editor.drawHoveredItems();
+        editor.drawSelectedItem();
 
         EndDrawing();
     }
