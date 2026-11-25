@@ -1,7 +1,9 @@
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <raylib.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 const int OneUnit = 100;
@@ -152,6 +154,7 @@ public:
     void setId(int newId) { id = newId; }
 
     coord getPosition() const { return position; }
+    float getAngle() const{return angle;}
 };
 
 class Limb : public Part {
@@ -171,6 +174,9 @@ protected:
             if (j != nullptr) {
                 j->setRadius(jointRadius);
             }
+        }
+        if (joints[0] != nullptr && joints[1] != nullptr) {
+            setPosition(position);
         }
     }
 
@@ -304,6 +310,14 @@ public:
         updateDimentions();
     }
 
+    void changeLength(float deltaLength) {
+        boneLength += deltaLength;
+        if (boneLength < 0.2f) {
+            boneLength = 0.2f;
+        }
+        updateDimentions();
+    }
+
     void changeMuscle(float desity) {
         muscleDensity += desity;
         updateDimentions();
@@ -330,23 +344,32 @@ public:
 
 class Button {
 private:
+    int id = -1;
     Size size{};
     Color color{LIGHTGRAY};
     coord position{};
-    bool swich = true;
+    bool swich = false;
     bool isPressed = false;
+    std::function<void()> onClick{};
 
 public:
     Button() = default;
-    Button(const Size& size, const Color& color, const coord& poz, bool Toggle)
-        : size(size), color(color), position(poz), swich(Toggle) {}
+    Button(const Size& size, const Color& color, const coord& poz, bool toggle, std::function<void()> action = nullptr)
+        : size(size),
+          color(color),
+          position(poz),
+          swich(toggle),
+          onClick(std::move(action)) {}
 
     friend std::ostream& operator<<(std::ostream& os, const Button& b) {
-        os << "Button pos=" << b.position
+        os << "Button[" << b.getId() << "] pos=" << b.position
            << " size=" << b.size
-           << " pressed=" << (b.isPressed ? "true" : "false");
+           << " pressed=" << (b.getIsPressed() ? "true" : "false");
         return os;
     }
+
+    int getId() const { return id; }
+    void setId(int newId) { id = newId; }
 
     bool getIsPressed() const { return isPressed; }
 
@@ -354,20 +377,31 @@ public:
         return CheckCollisionPointRec(mouse, Rectangle{position.x, position.y, size.width, size.height});
     }
 
-    void Toggle(Vector2 mouse) {
+    void update(Vector2 mouse) {
+        const bool hovered = ContainsPoint(mouse);
         if (swich) {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && ContainsPoint(mouse)) {
+            if (hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 isPressed = !isPressed;
             }
+            if (isPressed && onClick) {
+                onClick();
+            }
         } else {
-            isPressed = IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ContainsPoint(mouse);
+            if (hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                isPressed = true;
+                if (onClick) {
+                    onClick();
+                }
+            } else if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) || !hovered) {
+                isPressed = false;
+            }
         }
     }
 
     void draw() const {
         const Color fill = isPressed ? DARKGRAY : color;
         DrawRectangleV(Vector2{position.x, position.y}, Vector2{size.width, size.height}, fill);
-        DrawRectangleLinesEx(Rectangle{position.x, position.y, size.width, size.height}, 2.0f, BLACK);
+        DrawRectangleLinesEx(Rectangle{position.x, position.y, size.width, size.height}, 2., BLACK);
     }
 };
 
@@ -375,6 +409,7 @@ class Editor {
 private:
     std::vector<Limb*> allLimbs;
     std::vector<Joint*> allJoints;
+    std::vector<Button> buttons;
 
     HoverType selectedType = HoverType::Limb;
     int selectedId = -1;
@@ -398,11 +433,15 @@ public:
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Editor& e) {
-        os << "Editor (" << e.allLimbs.size() << " limbs, " << e.allJoints.size() << " joints):\n";
+        os << "Editor (" << e.allLimbs.size() << " limbs, " << e.allJoints.size() << " joints, "
+           << e.buttons.size() << " buttons):\n";
         for (const Limb* limb : e.allLimbs) {
             if (limb != nullptr) {
                 os << "  " << *limb << "\n";
             }
+        }
+        for (const Button& btn : e.buttons) {
+            os << "  " << btn << "\n";
         }
         if (e.selectedId != -1) {
             os << "  Selected: " << HoveredItem{e.selectedType, e.selectedId} << "\n";
@@ -428,6 +467,19 @@ public:
         return limb;
     }
 
+    void createButton(const Size& size, const Color& color, const coord& pos, bool toggle, std::function<void()> action = nullptr) {
+        Button btn(size, color, pos, toggle, std::move(action));
+        btn.setId(static_cast<int>(buttons.size()));
+        buttons.push_back(std::move(btn));
+    }
+
+    Limb* getSelectedLimb() const {
+        if (selectedType != HoverType::Limb || selectedId < 0 || selectedId >= static_cast<int>(allLimbs.size())) {
+            return nullptr;
+        }
+        return allLimbs[selectedId];
+    }
+
     std::vector<HoveredItem> getHoveredItems(Vector2 mouse) const {
         std::vector<HoveredItem> hovered;
 
@@ -445,6 +497,7 @@ public:
 
         return hovered;
     }
+
     void updateSelection(Vector2 mouse) {
         if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             return;
@@ -460,15 +513,35 @@ public:
         selectedId = hovered.back().id;
     }
 
+    void update(Vector2 mouse) {
+        bool overButton = false;
+        for (Button& btn : buttons) {
+            btn.update(mouse);
+            if (btn.ContainsPoint(mouse)) {
+                overButton = true;
+            }
+        }
 
-    void drawSelectedItem()const {
-        if (selectedId==-1) return;
-        int Y=20;
-        if (selectedId != -1) {
-            const std::string text = "Selected: " + HoveredItem{selectedType, selectedId}.show();
-            DrawText(text.c_str(), 170, Y, 20, GREEN);
+        if (overButton && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            return;
+        }
+
+        if (!overButton) {
+            updateSelection(mouse);
+        }
+        for (Limb* limb : allLimbs) {
+            limb->IsHeld(mouse);
         }
     }
+
+    void drawSelectedItem() const {
+        if (selectedId == -1) {
+            return;
+        }
+        const std::string text = "Selected: " + HoveredItem{selectedType, selectedId}.show();
+        DrawText(text.c_str(), 170, 20, 20, GREEN);
+    }
+
     void drawHoveredItems() const {
         int Y = 20;
         for (const auto& item : getHoveredItems(GetMousePosition())) {
@@ -476,56 +549,86 @@ public:
             Y += 20;
         }
     }
+
+    void draw(Vector2 mouse) const {
+        for (const Limb* limb : allLimbs) {
+            limb->draw();
+        }
+        for (const Joint* joint : allJoints) {
+            joint->draw(false, mouse);
+        }
+        for (const Button& btn : buttons) {
+            btn.draw();
+        }
+        drawHoveredItems();
+        drawSelectedItem();
+    }
 };
+
+void LoadScenario(Editor& editor) {
+    // buton creere limb
+    editor.createButton(Size{80., 40.}, LIGHTGRAY, coord{20., 650.}, false, [&editor]() {
+        editor.createLimb();
+    });
+
+    // buton adaugare lungime
+    editor.createButton(Size{80., 40.}, SKYBLUE, coord{110., 650.}, false, [&editor]() {
+        if (Limb* selected = editor.getSelectedLimb()) {
+            selected->changeLength(0.2);
+        }
+    });
+
+    // scadere lungime
+    editor.createButton(Size{80., 40.}, RED, coord{200., 650.}, true, [&editor]() {
+        if (Limb* selected = editor.getSelectedLimb()) {
+            selected->changeLength(-0.02);
+        }
+    });
+
+    // scimbare unghi+
+    editor.createButton(Size{80., 40.}, RED, coord{290., 650.}, true, [&editor]() {
+        if (Limb* selected = editor.getSelectedLimb()) {
+            selected->realiniere(selected->getAngle()+0.1);
+        }
+    });
+    // scimbare unghi
+    editor.createButton(Size{80., 40.}, RED, coord{380., 650.}, true, [&editor]() {
+        if (Limb* selected = editor.getSelectedLimb()) {
+            selected->realiniere(selected->getAngle()-0.1);
+        }
+    });
+
+}
 
 int main() {
     Editor editor;
-    Limb* limb = editor.createLimb();
-    Limb* limb2 = editor.createLimb();
-    limb2->changeBone(0.2f, 1.2f);
-    limb2->changeMuscle(0.3f);
-    limb2->realiniere(0.5f);
-
-    Limb previewLimb(coord{100.0f, 100.0f}, 1.0f, 1.0f, 1.0f, 0.0f);
-    previewLimb.replaceJoint(1, new Joint(coord{150.0f, 150.0f}, previewLimb.getJoint(0)->getRadius()));
-    std::cout << previewLimb << "\n";
-
-    Button spawnBtn(Size{120.0f, 40.0f}, LIGHTGRAY, coord{20.0f, 650.0f}, true);
-    std::cout << spawnBtn << " (pressed=" << spawnBtn.getIsPressed() << ")\n";
+    LoadScenario(editor);
 
     int mode = 1;
     std::cin >> mode;
     if (mode == 0) {
-        std::cout << editor << "\n";
+        Limb previewLimb(coord{100.0f, 100.0f}, 1.0f, 1.0f, 1.0f, 0.0f);
+        previewLimb.changeBone(0.1f, 1.0f);
+        previewLimb.changeMuscle(0.1f);
+        previewLimb.realiniere(0.0f);
+        previewLimb.replaceJoint(1, new Joint(coord{150.0f, 150.0f}, previewLimb.getJoint(0)->getRadius()));
+        std::cout << editor << "\n" << previewLimb << "\n";
         return 0;
     }
 
-    limb2->setPosition({BorderWidth / 2.0f, BorderHeight / 2.0f});
     InitWindow(BorderWidth, BorderHeight, "Engene");
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
-
-        Vector2 mouse = GetMousePosition();
-        editor.updateSelection(mouse);
-        spawnBtn.Toggle(mouse);
-        limb->IsHeld(mouse);
-        limb2->IsHeld(mouse);
+        const Vector2 mouse = GetMousePosition();
+        editor.update(mouse);
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
-        limb->draw();
-        limb2->draw();
-        limb->getJoint(0)->draw(false, mouse);
-        limb->getJoint(1)->draw(false, mouse);
-        limb2->getJoint(0)->draw(false, mouse);
-        limb2->getJoint(1)->draw(false, mouse);
-        spawnBtn.draw();
-        editor.drawHoveredItems();
-        editor.drawSelectedItem();
-
+        editor.draw(mouse);
         EndDrawing();
     }
+
     std::cout << editor << "\n";
     CloseWindow();
     return 0;
