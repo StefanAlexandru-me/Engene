@@ -462,6 +462,7 @@ public:
 
 
     void drawSelectedItem()const {
+        if (selectedId==-1) return;
         int Y=20;
         if (selectedId != -1) {
             const std::string text = "Selected: " + HoveredItem{selectedType, selectedId}.show();
