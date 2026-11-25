@@ -154,7 +154,7 @@ public:
     void setId(int newId) { id = newId; }
 
     coord getPosition() const { return position; }
-    float getAngle() const{return angle;}
+    float getAngle() const { return angle; }
 };
 
 class Limb : public Part {
@@ -218,8 +218,12 @@ public:
     }
 
     ~Limb() {
-        delete joints[0];
-        delete joints[1];
+        if (CoupleIndex != 0) {
+            delete joints[0];
+        }
+        if (CoupleIndex != 1) {
+            delete joints[1];
+        }
     }
 
     Limb& operator=(const Limb& other) {
@@ -260,14 +264,52 @@ public:
         return os;
     }
 
+    bool isCoupled() const { return CoupleIndex != -1; }
+    int getCoupleIndex() const { return CoupleIndex; }
+    bool getIsDragging() const { return isDragging; }
+
     void setPosition(const coord& newPos) {
         position = newPos;
         const float pixelLength = boneLength * OneUnit;
-        joints[0]->setPosition(position);
-        joints[1]->setPosition(coord{
-            position.x + std::sin(angle) * pixelLength,
-            position.y + std::cos(angle) * pixelLength
-        });
+        if (CoupleIndex == 1) {
+            const coord parentPos = joints[1]->getPosition();
+            position = coord{
+                parentPos.x - std::sin(angle) * pixelLength,
+                parentPos.y - std::cos(angle) * pixelLength
+            };
+            joints[0]->setPosition(position);
+        } else {
+            joints[0]->setPosition(position);
+            joints[1]->setPosition(coord{
+                position.x + std::sin(angle) * pixelLength,
+                position.y + std::cos(angle) * pixelLength
+            });
+        }
+    }
+
+    void syncWithParent() {
+        if (CoupleIndex != -1 && joints[CoupleIndex] != nullptr) {
+            setPosition(joints[CoupleIndex]->getPosition());
+        }
+    }
+
+    void setParentJoint(int index, Joint* parentJoint) {
+        if (index < 0 || index > 1 || parentJoint == nullptr) {
+            return;
+        }
+        joints[index] = parentJoint;
+        CoupleIndex = index;
+
+        const coord parentPos = parentJoint->getPosition();
+        const float pixelLength = boneLength * OneUnit;
+        if (index == 0) {
+            setPosition(parentPos);
+        } else {
+            setPosition(coord{
+                parentPos.x - std::sin(angle) * pixelLength,
+                parentPos.y - std::cos(angle) * pixelLength
+            });
+        }
     }
 
     bool containsPoint(Vector2 mouse) const {
@@ -467,6 +509,86 @@ public:
         return limb;
     }
 
+    void combineJoints(int parentJointId, int childJointId) {
+        if (parentJointId == childJointId) {
+            return;
+        }
+
+        Joint* parentJoint = nullptr;
+        Limb* parentLimb = nullptr;
+        int parentSlot = -1;
+
+        Joint* childJoint = nullptr;
+        Limb* childLimb = nullptr;
+        int childSlot = -1;
+
+        for (Limb* limb : allLimbs) {
+            for (int i = 0; i < 2; ++i) {
+                if (limb->getCoupleIndex() == i) {
+                    continue;
+                }
+                Joint* j = limb->getJoint(i);
+                if (j == nullptr) {
+                    continue;
+                }
+                if (j->getId() == parentJointId) {
+                    parentJoint = j;
+                    parentLimb = limb;
+                    parentSlot = i;
+                }
+                if (j->getId() == childJointId) {
+                    childJoint = j;
+                    childLimb = limb;
+                    childSlot = i;
+                }
+            }
+        }
+
+        if (parentJoint == nullptr || childJoint == nullptr || parentLimb == nullptr || childLimb == nullptr ||
+            parentLimb == childLimb || parentSlot == -1 || childSlot == -1) {
+            return;
+        }
+
+        if (childLimb->isCoupled() && !parentLimb->isCoupled()) {
+            std::swap(parentJoint, childJoint);
+            std::swap(parentLimb, childLimb);
+            std::swap(parentSlot, childSlot);
+        }
+
+        if (childLimb->isCoupled()) {
+            return;
+        }
+
+
+        const int removedJointId = childJoint->getId();
+        for (auto it = allJoints.begin(); it != allJoints.end(); ++it) {
+            if (*it == childJoint) {
+                allJoints.erase(it);
+                break;
+            }
+        }
+        delete childJoint;
+
+        if (selectedType == HoverType::Joint && selectedId == removedJointId) {
+            selectedId = -1;
+        }
+
+        childLimb->setParentJoint(childSlot, parentJoint);
+    }
+
+    void combineJoints() {
+        std::vector<int> hoveredJointIds;
+        for (const HoveredItem& item : getHoveredItems(GetMousePosition())) {
+            if (item.type == HoverType::Joint) {
+                hoveredJointIds.push_back(item.id);
+            }
+        }
+
+        if (hoveredJointIds.size() >= 2) {
+            combineJoints(hoveredJointIds[0], hoveredJointIds[1]);
+        }
+    }
+
     void createButton(const Size& size, const Color& color, const coord& pos, bool toggle, std::function<void()> action = nullptr) {
         Button btn(size, color, pos, toggle, std::move(action));
         btn.setId(static_cast<int>(buttons.size()));
@@ -522,6 +644,10 @@ public:
             }
         }
 
+        if (IsKeyPressed(KEY_C)) {
+            combineJoints();
+        }
+
         if (overButton && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             return;
         }
@@ -529,8 +655,17 @@ public:
         if (!overButton) {
             updateSelection(mouse);
         }
+
         for (Limb* limb : allLimbs) {
-            limb->IsHeld(mouse);
+            if (!limb->isCoupled() && limb->IsHeld(mouse)) {
+                break;
+            }
+        }
+
+        for (int i = 0; i < static_cast<int>(allLimbs.size()); i++) {
+            for (Limb* limb : allLimbs) {
+                limb->syncWithParent();
+            }
         }
     }
 
@@ -572,7 +707,7 @@ void LoadScenario(Editor& editor) {
     });
 
     // buton adaugare lungime
-    editor.createButton(Size{80., 40.}, SKYBLUE, coord{110., 650.}, false, [&editor]() {
+    editor.createButton(Size{80., 40.}, SKYBLUE, coord{110., 650.}, true, [&editor]() {
         if (Limb* selected = editor.getSelectedLimb()) {
             selected->changeLength(0.2);
         }
@@ -586,18 +721,18 @@ void LoadScenario(Editor& editor) {
     });
 
     // scimbare unghi+
-    editor.createButton(Size{80., 40.}, RED, coord{290., 650.}, true, [&editor]() {
+    editor.createButton(Size{80., 40.}, YELLOW, coord{290., 650.}, true, [&editor]() {
         if (Limb* selected = editor.getSelectedLimb()) {
-            selected->realiniere(selected->getAngle()+0.1);
-        }
-    });
-    // scimbare unghi
-    editor.createButton(Size{80., 40.}, RED, coord{380., 650.}, true, [&editor]() {
-        if (Limb* selected = editor.getSelectedLimb()) {
-            selected->realiniere(selected->getAngle()-0.1);
+            selected->realiniere(selected->getAngle() + 0.1);
         }
     });
 
+    // scimbare unghi-
+    editor.createButton(Size{80., 40.}, GREEN, coord{380., 650.}, true, [&editor]() {
+        if (Limb* selected = editor.getSelectedLimb()) {
+            selected->realiniere(selected->getAngle() - 0.1);
+        }
+    });
 }
 
 int main() {
